@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logik-Quiz: 70 Aufgaben</title>
+    
+    <!-- PWA: Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- PWA: Theme Color für Browser -->
+    <meta name="theme-color" content="#0078D7">
+    
+    <!-- iOS Safari: Web App Capable -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <!-- iOS Safari: Status Bar Style -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- iOS Safari: App Title -->
+    <meta name="apple-mobile-web-app-title" content="SDV Quiz">
+    
+    <!-- iOS Safari: Touch Icons -->
+    <link rel="apple-touch-icon" href="SDv-Icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="SDv-Icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="SDv-Icon-512x512.png">
+    
+    <!-- PWA: Service Worker Registrierung -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('sw.js')
+            .then(function(registration) {
+              console.log('SDV Quiz: Service Worker registriert:', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('SDV Quiz: Service Worker Registrierung fehlgeschlagen:', error);
+            });
+        });
+      }
+    </script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+        .quiz-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 850px;
+            width: 100%;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+        }
+        h1 { color: #1a1a2e; text-align: center; margin-bottom: 10px; font-size: 2.2em; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 0.95em; }
+        .timer-container {
+            background: #f0f0f0; border-radius: 50px; padding: 15px;
+            margin-bottom: 25px; text-align: center; position: relative; overflow: hidden;
+        }
+        .timer-bar {
+            position: absolute; left: 0; top: 0; height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            border-radius: 50px; transition: width 1s linear, background 0.3s; z-index: 0;
+        }
+        .timer-bar.warning { background: linear-gradient(90deg, #ff9800, #ffc107); }
+        .timer-bar.danger { background: linear-gradient(90deg, #f44336, #ff5722); }
+        .timer-text { position: relative; z-index: 1; font-size: 1.2em; font-weight: bold; color: #333; }
+        .progress { text-align: center; margin-bottom: 20px; color: #666; font-size: 0.9em; }
+        .difficulty-badge {
+            display: inline-block; padding: 5px 15px; border-radius: 20px;
+            font-size: 0.85em; font-weight: 600; margin-bottom: 20px;
+        }
+        .difficulty-easy { background: #e8f5e9; color: #2e7d32; }
+        .difficulty-medium { background: #fff3e0; color: #e65100; }
+        .difficulty-hard { background: #ffebee; color: #c62828; }
+        .statements {
+            background: #f8f9fa; border-left: 4px solid #0f3460;
+            padding: 20px; margin-bottom: 25px; border-radius: 0 12px 12px 0;
+        }
+        .statement { margin-bottom: 12px; line-height: 1.5; font-size: 1.05em; padding-left: 10px; }
+        .statement:last-child { margin-bottom: 0; }
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        .option {
+            background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 12px;
+            padding: 15px 20px; cursor: pointer; transition: all 0.3s;
+            font-size: 1em; text-align: left; position: relative; overflow: hidden;
+        }
+        .option:hover:not(.disabled) { border-color: #0f3460; background: #e8eeff; transform: translateX(5px); }
+        .option.selected { border-color: #0f3460; background: #e8eeff; }
+        .option.correct { border-color: #4CAF50; background: #e8f5e9; color: #2e7d32; }
+        .option.wrong { border-color: #f44336; background: #ffebee; color: #c62828; }
+        .option.disabled { cursor: not-allowed; opacity: 0.8; }
+        .option-icon { float: right; font-size: 1.2em; }
+        .btn {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            color: white; border: none; padding: 15px 40px; border-radius: 50px;
+            font-size: 1.1em; cursor: pointer; display: block; margin: 30px auto 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(15, 52, 96, 0.4); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .start-screen, .result-screen { text-align: center; }
+        .start-screen p, .result-screen p { color: #666; margin-bottom: 20px; line-height: 1.6; }
+        .rules-box { background: #f0f4ff; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left; }
+        .rules-box h3 { color: #1a1a2e; margin-bottom: 10px; }
+        .rules-box ul { margin-left: 20px; color: #555; }
+        .rules-box li { margin-bottom: 8px; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 25px 0; }
+        .stat-box { background: #f8f9fa; padding: 15px; border-radius: 12px; }
+        .stat-value { font-size: 1.8em; font-weight: bold; color: #0f3460; }
+        .stat-label { font-size: 0.85em; color: #666; margin-top: 5px; }
+        .feedback {
+            text-align: center; padding: 15px; border-radius: 12px;
+            margin-top: 20px; font-weight: 600; opacity: 0;
+            transform: translateY(-10px); transition: all 0.3s;
+        }
+        .feedback.show { opacity: 1; transform: translateY(0); }
+        .feedback.correct { background: #e8f5e9; color: #2e7d32; }
+        .feedback.wrong { background: #ffebee; color: #c62828; }
+        .feedback.timeout { background: #fff3e0; color: #e65100; }
+        .hidden { display: none; }
+        @media (max-width: 600px) {
+            .quiz-container { padding: 25px; }
+            h1 { font-size: 1.5em; }
+            .stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="startScreen" class="start-screen">
+        <h1>🧠 Logik-Quiz</h1>
+        <p>70 Aufgaben schlussfolgerndes Denken. Du hast pro Aufgabe <strong>54 Sekunden</strong>.<br>Die Reihenfolge wird bei jedem Start neu gemischt!</p>
+        <div class="rules-box">
+            <h3>Regeln:</h3>
+            <ul>
+                <li><strong>ODER</strong> ist immer <strong>inklusiv</strong></li>
+                <li><strong>Genau dann, wenn</strong> = <strong>bidirektionale Kopplung</strong></li>
+                <li>Schwierigkeitsgrad steigt an: 3 → 5 → 6 Bedingungssätze</li>
+                <li>Jede Aufgabe hat genau <strong>eine</strong> zwingende Lösung</li>
+            </ul>
+        </div>
+        <div class="stats">
+            <div class="stat-box"><div class="stat-value">70</div><div class="stat-label">Aufgaben</div></div>
+            <div class="stat-box"><div class="stat-value">54s</div><div class="stat-label">pro Aufgabe</div></div>
+            <div class="stat-box"><div class="stat-value">🔀</div><div class="stat-label">Zufallsmodus</div></div>
+        </div>
+        <button class="btn" onclick="startQuiz()">Quiz starten</button>
+    </div>
+
+    <div id="quizScreen" class="hidden">
+        <h1>🧠 Logik-Quiz</h1>
+        <div class="timer-container">
+            <div class="timer-bar" id="timerBar"></div>
+            <div class="timer-text" id="timerText">54 Sekunden</div>
+        </div>
+        <div class="progress">Aufgabe <span id="currentQuestion">1</span> von <span id="totalQuestions">70</span></div>
+        <div class="difficulty-badge" id="difficultyBadge">Leicht</div>
+        <div class="statements" id="statementsContainer"></div>
+        <div class="options" id="optionsContainer"></div>
+        <div class="feedback" id="feedback"></div>
+        <button class="btn hidden" id="nextBtn" onclick="nextQuestion()">Nächste Aufgabe →</button>
+    </div>
+
+    <div id="resultScreen" class="hidden result-screen">
+        <h1>🏆 Ergebnis</h1>
+        <div id="resultMessage"></div>
+        <div class="stats">
+            <div class="stat-box"><div class="stat-value" id="scoreValue">0</div><div class="stat-label">Punkte</div></div>
+            <div class="stat-box"><div class="stat-value" id="correctValue">0</div><div class="stat-label">Richtig</div></div>
+            <div class="stat-box"><div class="stat-value" id="timeBonus">0</div><div class="stat-label">Zeitbonus</div></div>
+        </div>
+        <p id="resultDetails"></p>
+        <button class="btn" onclick="restartQuiz()">Quiz wiederholen</button>
+    </div>
+</div>
+
+<script>
+const allQuizData = [
+    // LEICHT (3 Sätze) - Aufgaben 1-25
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn Anna studiert, dann liest sie regelmäßig Fachliteratur.",
+            "Anna studiert genau dann, wenn sie an der Universität eingeschrieben ist.",
+            "Anna ist an der Universität eingeschrieben."
+        ],
+        options: [
+            "Anna liest regelmäßig Fachliteratur.",
+            "Anna studiert nicht.",
+            "Anna ist nicht an der Universität eingeschrieben.",
+            "Es lässt sich nicht bestimmen, ob Anna liest."
+        ],
+        correct: 0,
+        explanation: "Bidirektionalität: eingeschrieben ↔ studiert. Da eingeschrieben, studiert sie. Implikation: studiert → liest. Also liest sie."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Alarm geht los oder die Tür ist offen.",
+            "Wenn die Tür offen ist, dann ist jemand eingetreten.",
+            "Der Alarm geht nicht los."
+        ],
+        options: [
+            "Es ist niemand eingetreten.",
+            "Jemand ist eingetreten.",
+            "Der Alarm ist defekt.",
+            "Die Tür ist geschlossen und niemand ist eingetreten."
+        ],
+        correct: 1,
+        explanation: "Inklusives ODER: Mindestens eine Aussage wahr. Alarm nicht los → Tür offen. Tür offen → jemand eingetreten."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Motor läuft genau dann, wenn der Tank nicht leer ist.",
+            "Der Tank ist leer oder die Zündung ist an.",
+            "Die Zündung ist nicht an."
+        ],
+        options: [
+            "Der Motor läuft.",
+            "Der Tank ist nicht leer.",
+            "Der Motor läuft nicht.",
+            "Es lässt sich nichts über den Motor sagen."
+        ],
+        correct: 2,
+        explanation: "Inklusives ODER + Zündung nicht an → Tank leer. Bidirektional: Motor läuft ↔ Tank nicht leer. Tank leer → Motor läuft nicht."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn es regnet, ist die Straße nass.",
+            "Die Straße ist nass oder der Sprinkler ist an.",
+            "Der Sprinkler ist nicht an."
+        ],
+        options: [
+            "Es regnet.",
+            "Die Straße ist trocken.",
+            "Es regnet oder die Straße ist nass.",
+            "Es lässt sich nicht bestimmen, ob es regnet."
+        ],
+        correct: 3,
+        explanation: "Inklusives ODER + Sprinkler nicht an → Straße nass. Aber 'nass' kann auch ohne Regen sein (andere Ursachen nicht ausgeschlossen)."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Ein Vogel kann fliegen oder schwimmen.",
+            "Wenn ein Vogel schwimmt, dann ist er ein Wasservogel.",
+            "Der Vogel ist kein Wasservogel."
+        ],
+        options: [
+            "Der Vogel kann nicht fliegen.",
+            "Der Vogel kann nicht schwimmen.",
+            "Der Vogel kann fliegen und schwimmen.",
+            "Der Vogel ist ein Wasservogel."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: nicht Wasservogel → nicht schwimmen. Inklusives ODER erlaubt weiterhin fliegen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Das Licht ist an oder das Fenster ist geöffnet.",
+            "Wenn das Fenster geöffnet ist, dann zieht es.",
+            "Es zieht nicht."
+        ],
+        options: [
+            "Das Fenster ist geöffnet.",
+            "Das Licht ist aus.",
+            "Das Fenster ist geschlossen.",
+            "Das Licht ist an und das Fenster ist geöffnet."
+        ],
+        correct: 2,
+        explanation: "Kontraposition: nicht ziehen → Fenster nicht geöffnet. Zwingend: Fenster geschlossen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Kaffee ist heiß oder der Kaffee ist stark.",
+            "Wenn der Kaffee stark ist, dann ist er bitter.",
+            "Der Kaffee ist nicht bitter."
+        ],
+        options: [
+            "Der Kaffee ist nicht stark.",
+            "Der Kaffee ist heiß.",
+            "Der Kaffee ist stark und heiß.",
+            "Der Kaffee ist weder heiß noch stark."
+        ],
+        correct: 0,
+        explanation: "Kontraposition: nicht bitter → nicht stark. Inklusives ODER: heiß ODER stark. Da nicht stark, muss heiß sein – aber zwingend folgt nur 'nicht stark'."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn Maria lächelt, dann hat sie gute Laune oder sie ist höflich.",
+            "Maria ist genau dann höflich, wenn sie im Büro ist.",
+            "Maria ist nicht im Büro."
+        ],
+        options: [
+            "Maria ist höflich.",
+            "Maria ist nicht höflich.",
+            "Maria hat gute Laune.",
+            "Maria lächelt nicht."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: höflich ↔ im Büro. Nicht im Büro → nicht höflich. Über gute Laune oder Lächeln lässt sich nichts Zwingendes sagen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Computer startet oder der Bildschirm ist an.",
+            "Der Bildschirm ist genau dann an, wenn der Strom fließt.",
+            "Der Strom fließt nicht."
+        ],
+        options: [
+            "Der Computer startet.",
+            "Der Bildschirm ist an.",
+            "Der Computer startet nicht.",
+            "Der Strom fließt."
+        ],
+        correct: 0,
+        explanation: "Bidirektional: Bildschirm an ↔ Strom fließt. Kein Strom → Bildschirm aus. Inklusives ODER: Computer startet ODER Bildschirm an. Da Bildschirm aus, muss Computer starten."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn der Zug pünktlich ist, dann ist die Strecke frei.",
+            "Die Strecke ist frei oder der Zug hat Verspätung.",
+            "Der Zug hat keine Verspätung."
+        ],
+        options: [
+            "Der Zug ist pünktlich.",
+            "Die Strecke ist nicht frei.",
+            "Der Zug ist pünktlich und die Strecke ist frei.",
+            "Es lässt sich nicht bestimmen, ob der Zug pünktlich ist."
+        ],
+        correct: 2,
+        explanation: "Keine Verspätung = pünktlich. Inklusives ODER: frei ODER Verspätung. Keine Verspätung, also muss frei gelten. Also: pünktlich UND frei."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn Peter joggt, dann ist er fit oder er hört Musik.",
+            "Peter ist genau dann fit, wenn er regelmäßig trainiert.",
+            "Peter trainiert nicht regelmäßig."
+        ],
+        options: [
+            "Peter ist fit.",
+            "Peter ist nicht fit.",
+            "Peter hört Musik.",
+            "Peter joggt nicht."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: fit ↔ trainiert. Nicht trainiert → nicht fit. Über Joggen oder Musik lässt sich nichts Zwingendes sagen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Die Sonne scheint oder es ist warm.",
+            "Wenn die Sonne scheint, dann ist es hell.",
+            "Es ist nicht hell."
+        ],
+        options: [
+            "Die Sonne scheint.",
+            "Es ist warm.",
+            "Die Sonne scheint nicht.",
+            "Es ist nicht warm."
+        ],
+        correct: 2,
+        explanation: "Kontraposition: nicht hell → Sonne nicht scheint. Zwingend: Sonne scheint nicht."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn Lisa kocht, dann ist die Küche warm oder es duftet.",
+            "Die Küche ist genau dann warm, wenn der Ofen an ist.",
+            "Der Ofen ist an."
+        ],
+        options: [
+            "Lisa kocht.",
+            "Die Küche ist warm.",
+            "Es duftet.",
+            "Lisa kocht nicht."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: warm ↔ Ofen an. Ofen an → warm. Über Kochen oder Duft lässt sich nichts Zwingendes sagen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Hund bellt oder die Katze miaut.",
+            "Wenn der Hund bellt, dann ist jemand an der Tür.",
+            "Niemand ist an der Tür."
+        ],
+        options: [
+            "Der Hund bellt.",
+            "Die Katze miaut.",
+            "Der Hund bellt nicht.",
+            "Die Katze miaut nicht."
+        ],
+        correct: 2,
+        explanation: "Kontraposition: niemand an Tür → Hund bellt nicht. Zwingend: Hund bellt nicht."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn Tom lernt, dann besteht er die Prüfung oder er hat Glück.",
+            "Tom hat genau dann Glück, wenn er eine Kleeblatt findet.",
+            "Tom hat kein Kleeblatt gefunden."
+        ],
+        options: [
+            "Tom hat Glück.",
+            "Tom hat kein Glück.",
+            "Tom besteht die Prüfung.",
+            "Tom lernt nicht."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: Glück ↔ Kleeblatt. Kein Kleeblatt → kein Glück. Über Lernen oder Bestehen lässt sich nichts Zwingendes sagen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Die Blumen blühen oder der Rasen ist grün.",
+            "Wenn die Blumen blühen, dann ist es Frühling.",
+            "Es ist nicht Frühling."
+        ],
+        options: [
+            "Die Blumen blühen.",
+            "Die Blumen blühen nicht.",
+            "Der Rasen ist grün.",
+            "Der Rasen ist nicht grün."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: nicht Frühling → Blumen nicht blühen. Zwingend: Blumen blühen nicht."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn das Radio an ist, dann ist Musik zu hören oder es ist laut.",
+            "Das Radio ist genau dann an, wenn der Schalter gedrückt ist.",
+            "Der Schalter ist nicht gedrückt."
+        ],
+        options: [
+            "Das Radio ist an.",
+            "Das Radio ist nicht an.",
+            "Musik ist zu hören.",
+            "Es ist laut."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: Radio an ↔ Schalter gedrückt. Schalter nicht gedrückt → Radio nicht an. Zwingend: Radio nicht an."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Kühlschrank ist voll oder der Einkauf wurde erledigt.",
+            "Wenn der Einkauf erledigt ist, dann ist jemand im Supermarkt gewesen.",
+            "Niemand war im Supermarkt."
+        ],
+        options: [
+            "Der Einkauf wurde erledigt.",
+            "Der Einkauf wurde nicht erledigt.",
+            "Der Kühlschrank ist voll.",
+            "Der Kühlschrank ist leer."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: niemand im Supermarkt → Einkauf nicht erledigt. Zwingend: Einkauf nicht erledigt."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn die Heizung an ist, dann ist es warm oder die Fenster sind geschlossen.",
+            "Die Fenster sind genau dann geschlossen, wenn es windig ist.",
+            "Es ist nicht windig."
+        ],
+        options: [
+            "Die Fenster sind geschlossen.",
+            "Die Fenster sind nicht geschlossen.",
+            "Es ist warm.",
+            "Die Heizung ist aus."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: Fenster geschlossen ↔ windig. Nicht windig → Fenster nicht geschlossen. Zwingend: Fenster nicht geschlossen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Das Telefon klingelt oder jemand schreibt eine Nachricht.",
+            "Wenn das Telefon klingelt, dann ist jemand am Apparat.",
+            "Niemand ist am Apparat."
+        ],
+        options: [
+            "Das Telefon klingelt.",
+            "Das Telefon klingelt nicht.",
+            "Jemand schreibt eine Nachricht.",
+            "Niemand schreibt eine Nachricht."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: niemand am Apparat → Telefon nicht klingelt. Zwingend: Telefon nicht klingelt."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn der Wecker klingelt, dann ist es Morgen oder jemand hat ihn gestellt.",
+            "Es ist genau dann Morgen, wenn die Sonne aufgeht.",
+            "Die Sonne ist nicht aufgegangen."
+        ],
+        options: [
+            "Es ist Morgen.",
+            "Es ist nicht Morgen.",
+            "Jemand hat den Wecker gestellt.",
+            "Der Wecker klingelt nicht."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: Morgen ↔ Sonne aufgeht. Sonne nicht aufgegangen → nicht Morgen. Zwingend: nicht Morgen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Bus fährt oder die Bahn ist pünktlich.",
+            "Wenn der Bus fährt, dann ist die Straße frei.",
+            "Die Straße ist nicht frei."
+        ],
+        options: [
+            "Der Bus fährt.",
+            "Der Bus fährt nicht.",
+            "Die Bahn ist pünktlich.",
+            "Die Bahn hat Verspätung."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: Straße nicht frei → Bus nicht fährt. Zwingend: Bus nicht fährt."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn es schneit, dann ist es kalt oder die Straße ist weiß.",
+            "Es ist genau dann kalt, wenn die Temperatur unter Null ist.",
+            "Die Temperatur ist unter Null."
+        ],
+        options: [
+            "Es schneit.",
+            "Es ist kalt.",
+            "Die Straße ist weiß.",
+            "Es schneit nicht."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: kalt ↔ unter Null. Unter Null → kalt. Über Schnee oder Straße lässt sich nichts Zwingendes sagen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Arzt ist da oder die Praxis ist geschlossen.",
+            "Wenn der Arzt da ist, dann kann man behandelt werden.",
+            "Man kann nicht behandelt werden."
+        ],
+        options: [
+            "Der Arzt ist da.",
+            "Der Arzt ist nicht da.",
+            "Die Praxis ist geschlossen.",
+            "Die Praxis ist offen."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: nicht behandeln → Arzt nicht da. Zwingend: Arzt nicht da."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn die Tür auf ist, dann ist jemand da oder es wird gelüftet.",
+            "Es wird genau dann gelüftet, wenn das Fenster offen ist.",
+            "Das Fenster ist nicht offen."
+        ],
+        options: [
+            "Es wird gelüftet.",
+            "Es wird nicht gelüftet.",
+            "Jemand ist da.",
+            "Die Tür ist zu."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: gelüftet ↔ Fenster offen. Fenster nicht offen → nicht gelüftet. Zwingend: nicht gelüftet."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Das Kind spielt oder es schläft.",
+            "Wenn das Kind spielt, dann ist es wach.",
+            "Das Kind ist nicht wach."
+        ],
+        options: [
+            "Das Kind spielt.",
+            "Das Kind spielt nicht.",
+            "Das Kind schläft.",
+            "Das Kind schläft nicht."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: nicht wach → Kind nicht spielt. Zwingend: Kind nicht spielt."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn die Prüfung schwer ist, dann lernen alle oder es gibt Nachschub.",
+            "Es gibt genau dann Nachschub, wenn jemand durchfällt.",
+            "Niemand fällt durch."
+        ],
+        options: [
+            "Es gibt Nachschub.",
+            "Es gibt keinen Nachschub.",
+            "Alle lernen.",
+            "Die Prüfung ist nicht schwer."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: Nachschub ↔ jemand fällt durch. Niemand durchgefallen → kein Nachschub. Zwingend: kein Nachschub."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Laden ist offen oder es ist Sonntag.",
+            "Wenn der Laden offen ist, dann kann man einkaufen.",
+            "Man kann nicht einkaufen."
+        ],
+        options: [
+            "Der Laden ist offen.",
+            "Der Laden ist nicht offen.",
+            "Es ist Sonntag.",
+            "Es ist nicht Sonntag."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: nicht einkaufen → Laden nicht offen. Zwingend: Laden nicht offen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn die Batterie voll ist, dann funktioniert das Gerät oder es ist neu.",
+            "Das Gerät ist genau dann neu, wenn es gerade gekauft wurde.",
+            "Es wurde nicht gerade gekauft."
+        ],
+        options: [
+            "Das Gerät ist neu.",
+            "Das Gerät ist nicht neu.",
+            "Die Batterie ist voll.",
+            "Die Batterie ist leer."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: neu ↔ gerade gekauft. Nicht gekauft → nicht neu. Zwingend: nicht neu."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Lehrer ist krank oder die Schule ist geschlossen.",
+            "Wenn der Lehrer krank ist, dann fällt der Unterricht aus.",
+            "Der Unterricht fällt nicht aus."
+        ],
+        options: [
+            "Der Lehrer ist krank.",
+            "Der Lehrer ist nicht krank.",
+            "Die Schule ist geschlossen.",
+            "Die Schule ist offen."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: Unterricht nicht aus → Lehrer nicht krank. Zwingend: Lehrer nicht krank."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn das Wetter schön ist, dann gehen wir spazieren oder wir grillen.",
+            "Wir grillen genau dann, wenn Kohle vorhanden ist.",
+            "Es ist keine Kohle vorhanden."
+        ],
+        options: [
+            "Wir grillen.",
+            "Wir grillen nicht.",
+            "Wir gehen spazieren.",
+            "Das Wetter ist nicht schön."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: grillen ↔ Kohle vorhanden. Keine Kohle → nicht grillen. Zwingend: nicht grillen."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Der Flug ist gebucht oder das Hotel ist reserviert.",
+            "Wenn der Flug gebucht ist, dann ist das Visum beantragt.",
+            "Das Visum ist nicht beantragt."
+        ],
+        options: [
+            "Der Flug ist gebucht.",
+            "Der Flug ist nicht gebucht.",
+            "Das Hotel ist reserviert.",
+            "Das Hotel ist nicht reserviert."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: Visum nicht beantragt → Flug nicht gebucht. Zwingend: Flug nicht gebucht."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Wenn die Pflanze gegossen wird, dann wächst sie oder sie blüht.",
+            "Die Pflanze blüht genau dann, wenn sie genug Licht hat.",
+            "Sie hat nicht genug Licht."
+        ],
+        options: [
+            "Die Pflanze blüht.",
+            "Die Pflanze blüht nicht.",
+            "Die Pflanze wächst.",
+            "Die Pflanze wird nicht gegossen."
+        ],
+        correct: 1,
+        explanation: "Bidirektional: blüht ↔ genug Licht. Nicht genug Licht → nicht blüht. Zwingend: nicht blüht."
+    },
+    {
+        difficulty: "easy", difficultyLabel: "Leicht (3 Sätze)",
+        statements: [
+            "Das Konzert findet statt oder die Tickets werden zurückerstattet.",
+            "Wenn das Konzert stattfindet, dann ist die Bühne aufgebaut.",
+            "Die Bühne ist nicht aufgebaut."
+        ],
+        options: [
+            "Das Konzert findet statt.",
+            "Das Konzert findet nicht statt.",
+            "Die Tickets werden zurückerstattet.",
+            "Die Tickets werden nicht zurückerstattet."
+        ],
+        correct: 1,
+        explanation: "Kontraposition: Bühne nicht aufgebaut → Konzert nicht stattfindet. Zwingend: Konzert nicht stattfindet."
+    },
+
+    // MITTEL (4-5 Sätze) - Aufgaben 26-45
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (4 Sätze)",
+        statements: [
+            "Wenn es regnet, wird die Straße nass.",
+            "Die Straße ist nass oder der Sprinkler ist an.",
+            "Der Sprinkler ist genau dann an, wenn es Sommer ist.",
+            "Es ist nicht Sommer."
+        ],
+        options: [
+            "Es regnet nicht.",
+            "Die Straße ist trocken.",
+            "Es regnet.",
+            "Es lässt sich nicht bestimmen, ob es regnet."
+        ],
+        correct: 3,
+        explanation: "Nicht Sommer → Sprinkler nicht an. Inklusives ODER → Straße nass. Aber 'nass' kann durch Regen oder andere Ursachen – nicht eindeutig bestimmbar."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (4 Sätze)",
+        statements: [
+            "Der Motor läuft genau dann, wenn der Tank nicht leer ist.",
+            "Der Tank ist leer oder die Zündung ist an.",
+            "Die Zündung ist genau dann an, wenn der Schlüssel gedreht ist.",
+            "Der Schlüssel ist nicht gedreht."
+        ],
+        options: [
+            "Der Motor läuft.",
+            "Der Tank ist nicht leer.",
+            "Der Motor läuft nicht.",
+            "Die Zündung ist an."
+        ],
+        correct: 2,
+        explanation: "Schlüssel nicht gedreht → Zündung nicht an (Bidirektional). Zündung nicht an + inklusives ODER → Tank leer. Tank leer → Motor läuft nicht (Bidirektional)."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (4 Sätze)",
+        statements: [
+            "Das Licht ist an oder das Fenster ist geöffnet.",
+            "Wenn das Fenster geöffnet ist, dann zieht es.",
+            "Es zieht genau dann, wenn die Heizung aus ist.",
+            "Die Heizung ist an."
+        ],
+        options: [
+            "Das Fenster ist geöffnet.",
+            "Das Fenster ist geschlossen.",
+            "Es zieht.",
+            "Die Heizung ist aus."
+        ],
+        correct: 1,
+        explanation: "Heizung an → nicht ziehen (Kontraposition Bidirektional). Nicht ziehen → Fenster nicht geöffnet (Kontraposition). Zwingend: Fenster geschlossen."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (4 Sätze)",
+        statements: [
+            "Der Kaffee ist heiß oder der Kaffee ist stark.",
+            "Wenn der Kaffee stark ist, dann ist er bitter.",
+            "Der Kaffee ist genau dann bitter, wenn er lange gezogen wurde.",
+            "Der Kaffee wurde nicht lange gezogen."
+        ],
+        options: [
+            "Der Kaffee ist nicht stark.",
+            "Der Kaffee ist bitter.",
+            "Der Kaffee wurde lange gezogen.",
+            "Der Kaffee ist nicht heiß."
+        ],
+        correct: 0,
+        explanation: "Nicht lange gezogen → nicht bitter (Kontraposition). Nicht bitter → nicht stark (Kontraposition). Zwingend: nicht stark."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn Maria lächelt, dann hat sie gute Laune oder sie ist höflich.",
+            "Maria ist genau dann höflich, wenn sie im Büro ist.",
+            "Maria ist nicht im Büro.",
+            "Maria hat gute Laune oder sie lacht.",
+            "Wenn Maria gute Laune hat, dann lächelt sie."
+        ],
+        options: [
+            "Maria hat gute Laune und ist höflich.",
+            "Maria hat gute Laune und ist nicht höflich.",
+            "Maria hat keine gute Laune und ist höflich.",
+            "Maria hat keine gute Laune und ist nicht höflich."
+        ],
+        correct: 1,
+        explanation: "Nicht im Büro → nicht höflich. Aus 'gute Laune → lächelt' und 'lächelt → (gute Laune ODER höflich)' und nicht höflich folgt zwingend gute Laune. Also: gute Laune UND nicht höflich."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Der Computer startet oder der Bildschirm ist an.",
+            "Der Bildschirm ist genau dann an, wenn der Strom fließt.",
+            "Wenn der Strom fließt, dann ist die Sicherung eingeschaltet.",
+            "Die Sicherung ist ausgeschaltet oder der Computer startet.",
+            "Wenn der Computer startet, dann ist der Stromkreis geschlossen."
+        ],
+        options: [
+            "Der Computer startet und der Bildschirm ist an.",
+            "Der Computer startet und der Bildschirm ist aus.",
+            "Der Computer startet nicht und der Bildschirm ist an.",
+            "Der Computer startet nicht und der Bildschirm ist aus."
+        ],
+        correct: 1,
+        explanation: "Sicherung ausgeschaltet → Strom fließt nicht (Kontraposition). Strom fließt nicht → Bildschirm aus (Kontraposition). Computer startet (erfüllt ODER in Satz 4). Also: startet UND Bildschirm aus."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn der Zug pünktlich ist, dann ist die Strecke frei oder der Fahrer ist motiviert.",
+            "Der Fahrer ist genau dann motiviert, wenn er ausgeschlafen ist.",
+            "Der Fahrer ist nicht ausgeschlafen.",
+            "Die Strecke ist frei oder der Zug hat Verspätung.",
+            "Wenn der Zug Verspätung hat, dann ist die Strecke nicht frei."
+        ],
+        options: [
+            "Die Strecke ist frei und der Fahrer ist motiviert.",
+            "Die Strecke ist nicht frei und der Fahrer ist motiviert.",
+            "Die Strecke ist frei und der Fahrer ist nicht motiviert.",
+            "Die Strecke ist nicht frei und der Fahrer ist nicht motiviert."
+        ],
+        correct: 2,
+        explanation: "Nicht ausgeschlafen → nicht motiviert. Zug pünktlich → (frei ODER motiviert). Da nicht motiviert, muss frei gelten. Also: frei UND nicht motiviert."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn Anna studiert, dann liest sie Fachliteratur oder sie besucht Vorlesungen.",
+            "Anna besucht genau dann Vorlesungen, wenn sie eingeschrieben ist.",
+            "Anna ist eingeschrieben.",
+            "Anna liest Fachliteratur oder sie studiert nicht.",
+            "Wenn Anna Fachliteratur liest, dann studiert sie."
+        ],
+        options: [
+            "Anna studiert und besucht Vorlesungen.",
+            "Anna studiert und liest Fachliteratur.",
+            "Anna studiert nicht und liest keine Fachliteratur.",
+            "Anna studiert nicht und besucht Vorlesungen."
+        ],
+        correct: 0,
+        explanation: "Eingeschrieben → besucht Vorlesungen (Bidirektional). Studiert → (liest ODER Vorlesungen). Da Vorlesungen wahr, ist Implikation erfüllt. Inklusives ODER in Satz 4: liest ODER nicht studiert. Wenn sie studiert, ist ODER erfüllt. Zwingend: studiert UND Vorlesungen."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn es regnet, ist die Straße nass oder die Luft ist feucht.",
+            "Die Luft ist genau dann feucht, wenn die Temperatur über 20 Grad ist.",
+            "Die Temperatur ist nicht über 20 Grad.",
+            "Die Straße ist trocken oder es regnet nicht.",
+            "Der Sprinkler ist nicht an."
+        ],
+        options: [
+            "Es regnet und die Straße ist nass.",
+            "Es regnet nicht und die Straße ist trocken.",
+            "Es regnet und der Sprinkler ist an.",
+            "Es regnet nicht und der Sprinkler ist an."
+        ],
+        correct: 1,
+        explanation: "Nicht über 20 Grad → nicht feucht. Angenommen, es regnet: Aus Satz 1 → nass (da nicht feucht). Aber Satz 4: trocken ODER nicht regnet – beides falsch, Widerspruch! Also: nicht regnet. Sprinkler nicht an → keine andere Nass-Quelle. Also trocken. Zusammen: nicht regnet UND trocken."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn der Motor läuft, dann ist der Tank nicht leer oder die Zündung ist an.",
+            "Der Tank ist genau dann nicht leer, wenn getankt wurde.",
+            "Es wurde nicht getankt.",
+            "Die Zündung ist nicht an.",
+            "Wenn die Zündung nicht an ist, dann ist der Schlüssel nicht gedreht."
+        ],
+        options: [
+            "Der Motor läuft und der Schlüssel ist gedreht.",
+            "Der Motor läuft nicht und der Schlüssel ist nicht gedreht.",
+            "Der Motor läuft und die Zündung ist an.",
+            "Der Motor läuft nicht und die Zündung ist an."
+        ],
+        correct: 1,
+        explanation: "Nicht getankt → Tank leer. Zündung nicht an. Schlüssel nicht gedreht (Satz 5). Angenommen, Motor läuft: Aus Satz 1 → (nicht leer ODER Zündung an). Tank leer UND Zündung nicht an. Widerspruch! Also: Motor läuft nicht. Zusammen: nicht läuft, nicht gedreht."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn Peter joggt, dann ist er fit oder er hört Musik.",
+            "Peter ist genau dann fit, wenn er regelmäßig trainiert.",
+            "Peter trainiert regelmäßig.",
+            "Peter hört Musik oder er joggt nicht.",
+            "Wenn Peter Musik hört, dann joggt er."
+        ],
+        options: [
+            "Peter joggt und ist fit.",
+            "Peter joggt nicht und ist fit.",
+            "Peter joggt und hört Musik.",
+            "Peter joggt nicht und hört keine Musik."
+        ],
+        correct: 0,
+        explanation: "Trainiert regelmäßig → fit (Bidirektional). Joggt → (fit ODER Musik). Fit erfüllt. Inklusives ODER in Satz 4: Musik ODER nicht joggt. Wenn joggt, erfüllt. Zwingend: joggt UND fit."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Die Sonne scheint oder es ist warm.",
+            "Wenn die Sonne scheint, dann ist es hell.",
+            "Es ist genau dann hell, wenn der Tag nicht bewölkt ist.",
+            "Der Tag ist bewölkt.",
+            "Wenn es warm ist, dann ist die Sonne nicht zu sehen."
+        ],
+        options: [
+            "Die Sonne scheint und es ist warm.",
+            "Die Sonne scheint nicht und es ist warm.",
+            "Die Sonne scheint und es ist nicht warm.",
+            "Die Sonne scheint nicht und es ist nicht warm."
+        ],
+        correct: 1,
+        explanation: "Bewölkt → nicht hell (Kontraposition Bidirektional). Nicht hell → Sonne nicht scheint (Kontraposition). Inklusives ODER: Sonne ODER warm. Da nicht Sonne, muss warm gelten. Warm → Sonne nicht zu sehen. Konsistent. Also: nicht Sonne UND warm."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn Lisa kocht, dann ist die Küche warm oder es duftet.",
+            "Die Küche ist genau dann warm, wenn der Ofen an ist.",
+            "Der Ofen ist nicht an.",
+            "Es duftet oder Lisa kocht nicht.",
+            "Wenn es duftet, dann kocht Lisa."
+        ],
+        options: [
+            "Lisa kocht und die Küche ist warm.",
+            "Lisa kocht nicht und die Küche ist nicht warm.",
+            "Lisa kocht und es duftet.",
+            "Lisa kocht nicht und es duftet."
+        ],
+        correct: 2,
+        explanation: "Ofen nicht an → nicht warm (Kontraposition Bidirektional). Kocht → (warm ODER duftet). Da nicht warm, muss duften. Aus duftet → kocht (Satz 5). Also: kocht UND duftet."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Der Hund bellt oder die Katze miaut.",
+            "Wenn der Hund bellt, dann ist jemand an der Tür.",
+            "Jemand ist genau dann an der Tür, wenn es klingelt.",
+            "Es klingelt nicht.",
+            "Wenn die Katze miaut, dann ist sie hungrig."
+        ],
+        options: [
+            "Der Hund bellt und jemand ist an der Tür.",
+            "Der Hund bellt nicht und die Katze miaut.",
+            "Der Hund bellt nicht und die Katze ist hungrig.",
+            "Der Hund bellt und es klingelt."
+        ],
+        correct: 2,
+        explanation: "Nicht klingelt → niemand an Tür (Kontraposition Bidirektional). Niemand an Tür → Hund nicht bellt (Kontraposition). Inklusives ODER: Hund ODER Katze. Da nicht Hund, muss Katze miauen. Katze miaut → hungrig. Also: nicht Hund bellt UND Katze hungrig."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn Tom lernt, dann besteht er die Prüfung oder er hat Glück.",
+            "Tom hat genau dann Glück, wenn er ein Kleeblatt findet.",
+            "Tom hat kein Kleeblatt gefunden.",
+            "Tom besteht die Prüfung oder er lernt nicht.",
+            "Wenn Tom besteht, dann hat er gelernt."
+        ],
+        options: [
+            "Tom lernt und besteht die Prüfung.",
+            "Tom lernt nicht und besteht nicht.",
+            "Tom lernt und hat Glück.",
+            "Tom lernt nicht und hat Glück."
+        ],
+        correct: 0,
+        explanation: "Kein Kleeblatt → kein Glück (Kontraposition Bidirektional). Lernt → (besteht ODER Glück). Kein Glück, also muss bestehen. Besteht → gelernt (Satz 5). Also: lernt UND besteht."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn der Wecker klingelt, dann ist es Morgen oder jemand hat ihn gestellt.",
+            "Es ist genau dann Morgen, wenn die Sonne aufgeht.",
+            "Die Sonne ist nicht aufgegangen.",
+            "Jemand hat den Wecker gestellt oder er klingelt nicht.",
+            "Wenn jemand den Wecker gestellt hat, dann klingelt er."
+        ],
+        options: [
+            "Der Wecker klingelt und es ist Morgen.",
+            "Der Wecker klingelt und jemand hat ihn gestellt.",
+            "Der Wecker klingelt nicht und es ist nicht Morgen.",
+            "Der Wecker klingelt nicht und niemand hat ihn gestellt."
+        ],
+        correct: 2,
+        explanation: "Sonne nicht aufgegangen → nicht Morgen (Kontraposition Bidirektional). Angenommen, Wecker klingelt: Aus Satz 1 → (Morgen ODER gestellt). Nicht Morgen, also gestellt. Aus gestellt → klingelt (Satz 5). Konsistent, aber: Satz 4: gestellt ODER nicht klingelt. Wenn klingelt UND gestellt, erfüllt. Aber wir müssen prüfen, ob klingelt zwingend ist. Wenn nicht klingelt, dann aus Satz 4: gestellt ODER nicht klingelt. Wenn nicht gestellt, nicht klingelt erfüllt. Aber aus nicht klingelt folgt nichts über gestellt. Hmm, lass mich prüfen: Wenn nicht klingelt, kann gestellt oder nicht gestellt sein. Wenn gestellt, müsste klingeln (Satz 5). Widerspruch! Also: nicht gestellt. Dann nicht klingelt konsistent. Also: nicht klingelt UND nicht Morgen. Zwingend."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Der Bus fährt oder die Bahn ist pünktlich.",
+            "Wenn der Bus fährt, dann ist die Straße frei.",
+            "Die Straße ist genau dann frei, wenn kein Stau ist.",
+            "Es ist Stau.",
+            "Wenn die Bahn pünktlich ist, dann fährt der Bus nicht."
+        ],
+        options: [
+            "Der Bus fährt und die Bahn ist pünktlich.",
+            "Der Bus fährt nicht und die Bahn ist pünktlich.",
+            "Der Bus fährt und die Bahn hat Verspätung.",
+            "Der Bus fährt nicht und die Bahn hat Verspätung."
+        ],
+        correct: 1,
+        explanation: "Stau → nicht frei (Kontraposition Bidirektional). Nicht frei → Bus nicht fährt (Kontraposition). Inklusives ODER: Bus ODER Bahn pünktlich. Bus nicht fährt, also muss Bahn pünktlich sein. Bahn pünktlich → Bus nicht fährt (Satz 5). Konsistent. Also: nicht Bus UND Bahn pünktlich."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn es schneit, dann ist es kalt oder die Straße ist weiß.",
+            "Es ist genau dann kalt, wenn die Temperatur unter Null ist.",
+            "Die Temperatur ist unter Null.",
+            "Die Straße ist weiß oder es schneit nicht.",
+            "Wenn die Straße weiß ist, dann ist es kalt."
+        ],
+        options: [
+            "Es schneit und die Straße ist weiß.",
+            "Es schneit nicht und die Straße ist nicht weiß.",
+            "Es schneit und die Straße ist nicht weiß.",
+            "Es schneit nicht und die Straße ist weiß."
+        ],
+        correct: 0,
+        explanation: "Unter Null → kalt (Bidirektional). Schneit → (kalt ODER weiß). Kalt erfüllt. Inklusives ODER in Satz 4: weiß ODER nicht schneit. Wenn schneit, muss weiß sein. Weiß → kalt (Satz 5). Kalt ist wahr, konsistent. Also: schneit UND weiß."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Der Arzt ist da oder die Praxis ist geschlossen.",
+            "Wenn der Arzt da ist, dann kann man behandelt werden.",
+            "Man kann genau dann behandelt werden, wenn man einen Termin hat.",
+            "Man hat keinen Termin.",
+            "Wenn die Praxis geschlossen ist, dann hat man keinen Termin."
+        ],
+        options: [
+            "Der Arzt ist da und man kann behandelt werden.",
+            "Der Arzt ist nicht da und die Praxis ist geschlossen.",
+            "Der Arzt ist da und die Praxis ist geschlossen.",
+            "Der Arzt ist nicht da und man kann behandelt werden."
+        ],
+        correct: 1,
+        explanation: "Kein Termin → nicht behandeln (Kontraposition Bidirektional). Nicht behandeln → Arzt nicht da (Kontraposition). Inklusives ODER: Arzt ODER Praxis geschlossen. Arzt nicht da, also muss Praxis geschlossen sein. Praxis geschlossen → kein Termin (Satz 5). Konsistent. Also: nicht Arzt UND Praxis geschlossen."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn die Tür auf ist, dann ist jemand da oder es wird gelüftet.",
+            "Es wird genau dann gelüftet, wenn das Fenster offen ist.",
+            "Das Fenster ist nicht offen.",
+            "Jemand ist da oder die Tür ist zu.",
+            "Wenn jemand da ist, dann ist die Tür auf."
+        ],
+        options: [
+            "Jemand ist da und die Tür ist auf.",
+            "Jemand ist nicht da und die Tür ist zu.",
+            "Jemand ist da und die Tür ist zu.",
+            "Jemand ist nicht da und die Tür ist auf."
+        ],
+        correct: 0,
+        explanation: "Fenster nicht offen → nicht gelüftet (Kontraposition Bidirektional). Tür auf → (jemand da ODER gelüftet). Nicht gelüftet, also jemand da. Jemand da → Tür auf (Satz 5). Konsistent. Also: jemand da UND Tür auf."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Das Kind spielt oder es schläft.",
+            "Wenn das Kind spielt, dann ist es wach.",
+            "Das Kind ist genau dann wach, wenn die Augen offen sind.",
+            "Die Augen sind nicht offen.",
+            "Wenn das Kind schläft, dann sind die Augen zu."
+        ],
+        options: [
+            "Das Kind spielt und ist wach.",
+            "Das Kind spielt nicht und schläft.",
+            "Das Kind schläft nicht und ist wach.",
+            "Das Kind spielt und die Augen sind zu."
+        ],
+        correct: 1,
+        explanation: "Augen nicht offen → nicht wach (Kontraposition Bidirektional). Nicht wach → nicht spielen (Kontraposition). Inklusives ODER: spielen ODER schlafen. Nicht spielen, also schlafen. Schlafen → Augen zu (Satz 5). Konsistent. Also: nicht spielen UND schlafen."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn die Prüfung schwer ist, dann lernen alle oder es gibt Nachschub.",
+            "Es gibt genau dann Nachschub, wenn jemand durchfällt.",
+            "Niemand fällt durch.",
+            "Alle lernen oder die Prüfung ist nicht schwer.",
+            "Wenn alle lernen, dann ist die Prüfung schwer."
+        ],
+        options: [
+            "Die Prüfung ist schwer und alle lernen.",
+            "Die Prüfung ist nicht schwer und niemand lernt.",
+            "Die Prüfung ist schwer und es gibt Nachschub.",
+            "Die Prüfung ist nicht schwer und es gibt Nachschub."
+        ],
+        correct: 0,
+        explanation: "Niemand durchgefallen → kein Nachschub (Kontraposition Bidirektional). Prüfung schwer → (alle lernen ODER Nachschub). Kein Nachschub, also alle lernen. Alle lernen → Prüfung schwer (Satz 5). Konsistent. Also: schwer UND alle lernen."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Der Laden ist offen oder es ist Sonntag.",
+            "Wenn der Laden offen ist, dann kann man einkaufen.",
+            "Man kann genau dann einkaufen, wenn die Kasse funktioniert.",
+            "Die Kasse funktioniert nicht.",
+            "Wenn es Sonntag ist, dann ist der Laden geschlossen."
+        ],
+        options: [
+            "Der Laden ist offen und man kann einkaufen.",
+            "Der Laden ist geschlossen und es ist Sonntag.",
+            "Der Laden ist offen und es ist nicht Sonntag.",
+            "Der Laden ist geschlossen und die Kasse funktioniert."
+        ],
+        correct: 1,
+        explanation: "Kasse nicht funktioniert → nicht einkaufen (Kontraposition Bidirektional). Nicht einkaufen → Laden nicht offen (Kontraposition). Inklusives ODER: offen ODER Sonntag. Nicht offen, also Sonntag. Sonntag → geschlossen (Satz 5). Konsistent. Also: geschlossen UND Sonntag."
+    },
+    {
+        difficulty: "medium", difficultyLabel: "Mittel (5 Sätze)",
+        statements: [
+            "Wenn die Batterie voll ist, dann funktioniert das Gerät oder es ist neu.",
+            "Das Gerät ist genau dann neu, wenn es gerade gekauft wurde.",
+            "Es wurde gerade gekauft.",
+            "Das Gerät funktioniert oder die Batterie ist leer.",
+            "Wenn das Gerät funktioniert, dann ist die Batterie voll."
+        ],
+        options: [
+            "Die Batterie ist voll und das Gerät ist neu.",
+            "Die Batterie ist leer und das Gerät funktioniert.",
+            "Die Batterie ist voll und das Gerät funktioniert nicht.",
+            "Die Batterie ist leer und das Gerät ist nicht neu."
+        ],
+        correct: 0,
+        explanation: "Gerade gekauft → neu (Bidirektional). Batterie voll → (funktioniert ODER neu). Neu erfüllt. Inklusives ODER in Satz 4: funktioniert ODER leer. Wenn voll, funktioniert möglich. Aber: funktioniert → voll (Satz 5). Wenn nicht funktioniert, voll möglich (neu erfüllt Implikation). Aber Satz 4: wenn nicht funktioniert, muss leer sein. Widerspruch zu voll! Also: funktioniert. Dann voll (Satz 5). Also: voll UND neu."
+    },
+
+    // SCHWER (6 Sätze) - Aufgaben 46-70
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn Maria lächelt, dann hat sie gute Laune oder sie ist höflich.",
+            "Maria ist genau dann höflich, wenn sie im Büro ist.",
+            "Maria ist nicht im Büro.",
+            "Maria hat gute Laune oder sie lacht.",
+            "Wenn Maria gute Laune hat, dann lächelt sie.",
+            "Maria lächelt."
+        ],
+        options: [
+            "Maria hat gute Laune und ist höflich.",
+            "Maria hat gute Laune und ist nicht höflich.",
+            "Maria hat keine gute Laune und ist höflich.",
+            "Maria hat keine gute Laune und ist nicht höflich."
+        ],
+        correct: 1,
+        explanation: "Nicht im Büro → nicht höflich. Lächelt → (gute Laune ODER höflich). Da nicht höflich, muss gute Laune gelten. Also: gute Laune UND nicht höflich."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Der Computer startet oder der Bildschirm ist an.",
+            "Der Bildschirm ist genau dann an, wenn der Strom fließt.",
+            "Wenn der Strom fließt, dann ist die Sicherung eingeschaltet.",
+            "Die Sicherung ist ausgeschaltet oder der Computer startet.",
+            "Wenn der Computer startet, dann ist der Stromkreis geschlossen.",
+            "Der Stromkreis ist geschlossen."
+        ],
+        options: [
+            "Der Computer startet und der Bildschirm ist an.",
+            "Der Computer startet und der Bildschirm ist aus.",
+            "Der Computer startet nicht und der Bildschirm ist an.",
+            "Der Computer startet nicht und der Bildschirm ist aus."
+        ],
+        correct: 1,
+        explanation: "Stromkreis geschlossen → Computer startet (Satz 5). Sicherung ausgeschaltet → Strom fließt nicht (Kontraposition Satz 3). Strom fließt nicht → Bildschirm aus (Kontraposition Satz 2). Also: Computer startet, Bildschirm aus."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Zug pünktlich ist, dann ist die Strecke frei oder der Fahrer ist motiviert.",
+            "Der Fahrer ist genau dann motiviert, wenn er ausgeschlafen ist.",
+            "Der Fahrer ist nicht ausgeschlafen.",
+            "Die Strecke ist frei oder der Zug hat Verspätung.",
+            "Wenn der Zug Verspätung hat, dann ist die Strecke nicht frei.",
+            "Der Zug ist pünktlich."
+        ],
+        options: [
+            "Die Strecke ist frei und der Fahrer ist motiviert.",
+            "Die Strecke ist nicht frei und der Fahrer ist motiviert.",
+            "Die Strecke ist frei und der Fahrer ist nicht motiviert.",
+            "Die Strecke ist nicht frei und der Fahrer ist nicht motiviert."
+        ],
+        correct: 2,
+        explanation: "Nicht ausgeschlafen → nicht motiviert. Zug pünktlich → (frei ODER motiviert). Da nicht motiviert, muss frei gelten. Also: frei UND nicht motiviert."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn Anna studiert, dann liest sie Fachliteratur oder sie besucht Vorlesungen.",
+            "Anna besucht genau dann Vorlesungen, wenn sie eingeschrieben ist.",
+            "Anna ist eingeschrieben.",
+            "Anna liest Fachliteratur oder sie studiert nicht.",
+            "Wenn Anna Fachliteratur liest, dann studiert sie.",
+            "Anna studiert nicht."
+        ],
+        options: [
+            "Anna ist eingeschrieben und besucht Vorlesungen.",
+            "Anna ist nicht eingeschrieben und liest Fachliteratur.",
+            "Anna ist eingeschrieben und liest keine Fachliteratur.",
+            "Anna ist nicht eingeschrieben und besucht keine Vorlesungen."
+        ],
+        correct: 0,
+        explanation: "Eingeschrieben → besucht Vorlesungen (Bidirektional). Studiert nicht. Aus Satz 5: liest → studiert. Kontraposition: nicht studiert → nicht liest. Also nicht liest. Satz 4: liest ODER nicht studiert. Nicht studiert erfüllt. Zwingend: eingeschrieben UND Vorlesungen."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn es regnet, ist die Straße nass oder die Luft ist feucht.",
+            "Die Luft ist genau dann feucht, wenn die Temperatur über 20 Grad ist.",
+            "Die Temperatur ist nicht über 20 Grad.",
+            "Die Straße ist trocken oder es regnet nicht.",
+            "Der Sprinkler ist nicht an.",
+            "Wenn die Straße nass ist, dann ist der Sprinkler an oder es regnet."
+        ],
+        options: [
+            "Es regnet und die Straße ist nass.",
+            "Es regnet nicht und die Straße ist trocken.",
+            "Es regnet und der Sprinkler ist an.",
+            "Es regnet nicht und der Sprinkler ist an."
+        ],
+        correct: 1,
+        explanation: "Nicht über 20 Grad → nicht feucht. Angenommen, es regnet: Aus Satz 1 → nass (da nicht feucht). Aus nass → (Sprinkler an ODER regnet). Regnet erfüllt. Aber Satz 4: trocken ODER nicht regnet. Nass UND regnet → Widerspruch! Also: nicht regnet. Aus nicht regnet + Satz 6: Wenn nass, dann (Sprinkler ODER regnet). Sprinkler nicht an, nicht regnet. Also nicht nass (Kontraposition). Also trocken. Zusammen: nicht regnet UND trocken."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Motor läuft, dann ist der Tank nicht leer oder die Zündung ist an.",
+            "Der Tank ist genau dann nicht leer, wenn getankt wurde.",
+            "Es wurde nicht getankt.",
+            "Die Zündung ist nicht an.",
+            "Wenn die Zündung nicht an ist, dann ist der Schlüssel nicht gedreht.",
+            "Der Schlüssel ist gedreht oder der Motor läuft nicht."
+        ],
+        options: [
+            "Der Motor läuft und der Schlüssel ist gedreht.",
+            "Der Motor läuft nicht und der Schlüssel ist nicht gedreht.",
+            "Der Motor läuft und die Zündung ist an.",
+            "Der Motor läuft nicht und die Zündung ist an."
+        ],
+        correct: 1,
+        explanation: "Nicht getankt → Tank leer. Zündung nicht an. Aus Satz 5: Schlüssel nicht gedreht. Angenommen, Motor läuft: Aus Satz 1 → (nicht leer ODER Zündung an). Tank leer UND Zündung nicht an. Widerspruch! Also: Motor läuft nicht. Satz 6: Schlüssel gedreht ODER nicht läuft. Nicht läuft erfüllt. Aber wir wissen: Schlüssel nicht gedreht. Also: nicht läuft UND nicht gedreht."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Das Licht ist an oder das Fenster ist geöffnet.",
+            "Wenn das Fenster geöffnet ist, dann zieht es.",
+            "Es zieht genau dann, wenn die Heizung aus ist.",
+            "Die Heizung ist an.",
+            "Wenn die Heizung an ist, dann ist die Tür geschlossen.",
+            "Die Tür ist geschlossen oder das Licht ist aus."
+        ],
+        options: [
+            "Das Licht ist an und das Fenster ist geöffnet.",
+            "Das Licht ist an und das Fenster ist geschlossen.",
+            "Das Licht ist aus und das Fenster ist geöffnet.",
+            "Das Licht ist aus und das Fenster ist geschlossen."
+        ],
+        correct: 1,
+        explanation: "Heizung an → nicht ziehen (Kontraposition Bidirektional). Nicht ziehen → Fenster nicht geöffnet (Kontraposition). Heizung an → Tür geschlossen (Satz 5). Tür geschlossen ODER Licht aus. Fenster geschlossen ist wahr. Inklusives ODER in Satz 1: Licht an ODER Fenster offen. Da Fenster geschlossen, muss Licht an sein. Also: Licht an UND Fenster geschlossen."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Der Kaffee ist heiß oder der Kaffee ist stark.",
+            "Wenn der Kaffee stark ist, dann ist er bitter.",
+            "Der Kaffee ist genau dann bitter, wenn er lange gezogen wurde.",
+            "Der Kaffee wurde nicht lange gezogen.",
+            "Wenn der Kaffee nicht bitter ist, dann ist er nicht stark.",
+            "Der Kaffee ist heiß oder er ist nicht stark."
+        ],
+        options: [
+            "Der Kaffee ist heiß und stark.",
+            "Der Kaffee ist heiß und nicht stark.",
+            "Der Kaffee ist nicht heiß und stark.",
+            "Der Kaffee ist nicht heiß und nicht stark."
+        ],
+        correct: 1,
+        explanation: "Nicht lange gezogen → nicht bitter (Kontraposition). Nicht bitter → nicht stark (Satz 5). Inklusives ODER in Satz 1: heiß ODER stark. Da nicht stark, muss heiß sein. Also: heiß UND nicht stark."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Alarm losgeht, dann ist die Tür offen oder das Fenster ist geöffnet.",
+            "Die Tür ist genau dann offen, wenn jemand eingetreten ist.",
+            "Es ist niemand eingetreten.",
+            "Das Fenster ist geöffnet oder der Alarm ist aus.",
+            "Wenn das Fenster geöffnet ist, dann zieht es.",
+            "Es zieht nicht."
+        ],
+        options: [
+            "Der Alarm losgeht und die Tür ist offen.",
+            "Der Alarm losgeht nicht und die Tür ist geschlossen.",
+            "Der Alarm losgeht und das Fenster ist geöffnet.",
+            "Der Alarm losgeht nicht und das Fenster ist geschlossen."
+        ],
+        correct: 3,
+        explanation: "Niemand eingetreten → Tür nicht offen (Kontraposition). Nicht ziehen → Fenster nicht geöffnet (Kontraposition). Angenommen, Alarm losgeht: Aus Satz 1 → (Tür offen ODER Fenster geöffnet). Beides falsch! Widerspruch. Also: Alarm nicht losgeht. Satz 4: Fenster geöffnet ODER Alarm aus. Alarm aus erfüllt. Also: nicht losgeht, Tür geschlossen, Fenster geschlossen."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn Anna studiert, dann liest sie Fachliteratur oder sie besucht Vorlesungen.",
+            "Anna besucht genau dann Vorlesungen, wenn sie eingeschrieben ist.",
+            "Anna ist nicht eingeschrieben.",
+            "Anna liest Fachliteratur oder sie studiert nicht.",
+            "Wenn Anna Fachliteratur liest, dann studiert sie.",
+            "Anna studiert."
+        ],
+        options: [
+            "Anna ist nicht eingeschrieben und liest Fachliteratur.",
+            "Anna ist nicht eingeschrieben und besucht keine Vorlesungen.",
+            "Anna ist eingeschrieben und besucht Vorlesungen.",
+            "Anna ist eingeschrieben und liest Fachliteratur."
+        ],
+        correct: 1,
+        explanation: "Nicht eingeschrieben → nicht Vorlesungen (Bidirektional). Studiert. Aus Satz 1 → (liest ODER Vorlesungen). Da nicht Vorlesungen, muss liest gelten. Aus Satz 5: liest → studiert. Studiert ist wahr, konsistent. Satz 4: liest ODER nicht studiert. Liest erfüllt. Also: nicht eingeschrieben, nicht Vorlesungen, liest, studiert. Zwingend: nicht eingeschrieben UND nicht Vorlesungen."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Zug pünktlich ist, dann ist die Strecke frei oder der Fahrer ist motiviert.",
+            "Der Fahrer ist genau dann motiviert, wenn er ausgeschlafen ist.",
+            "Der Fahrer ist ausgeschlafen.",
+            "Die Strecke ist frei oder der Zug hat Verspätung.",
+            "Wenn der Zug Verspätung hat, dann ist die Strecke nicht frei.",
+            "Der Zug hat keine Verspätung."
+        ],
+        options: [
+            "Die Strecke ist frei und der Fahrer ist motiviert.",
+            "Die Strecke ist nicht frei und der Fahrer ist motiviert.",
+            "Die Strecke ist frei und der Fahrer ist nicht motiviert.",
+            "Die Strecke ist nicht frei und der Fahrer ist nicht motiviert."
+        ],
+        correct: 0,
+        explanation: "Ausgeschlafen → motiviert (Bidirektional). Keine Verspätung. Satz 4: frei ODER Verspätung. Keine Verspätung, also muss frei gelten. Also: frei UND motiviert."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn Peter joggt, dann ist er fit oder er hört Musik.",
+            "Peter ist genau dann fit, wenn er regelmäßig trainiert.",
+            "Peter trainiert nicht regelmäßig.",
+            "Peter hört Musik oder er joggt nicht.",
+            "Wenn Peter Musik hört, dann joggt er.",
+            "Peter joggt."
+        ],
+        options: [
+            "Peter joggt und ist fit.",
+            "Peter joggt und hört Musik.",
+            "Peter joggt nicht und ist nicht fit.",
+            "Peter joggt nicht und hört Musik."
+        ],
+        correct: 1,
+        explanation: "Nicht trainiert → nicht fit (Kontraposition Bidirektional). Joggt → (fit ODER Musik). Nicht fit, also muss Musik gelten. Musik → joggt (Satz 5). Joggt ist wahr, konsistent. Also: joggt UND Musik."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Die Sonne scheint oder es ist warm.",
+            "Wenn die Sonne scheint, dann ist es hell.",
+            "Es ist genau dann hell, wenn der Tag nicht bewölkt ist.",
+            "Der Tag ist bewölkt.",
+            "Wenn es warm ist, dann ist die Sonne nicht zu sehen.",
+            "Die Sonne ist nicht zu sehen oder es ist nicht warm."
+        ],
+        options: [
+            "Die Sonne scheint und es ist warm.",
+            "Die Sonne scheint nicht und es ist warm.",
+            "Die Sonne scheint und es ist nicht warm.",
+            "Die Sonne scheint nicht und es ist nicht warm."
+        ],
+        correct: 1,
+        explanation: "Bewölkt → nicht hell (Kontraposition Bidirektional). Nicht hell → Sonne nicht scheint (Kontraposition). Inklusives ODER: Sonne ODER warm. Da nicht Sonne, muss warm gelten. Warm → Sonne nicht zu sehen. Konsistent. Also: nicht Sonne UND warm."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn Lisa kocht, dann ist die Küche warm oder es duftet.",
+            "Die Küche ist genau dann warm, wenn der Ofen an ist.",
+            "Der Ofen ist nicht an.",
+            "Es duftet oder Lisa kocht nicht.",
+            "Wenn es duftet, dann kocht Lisa.",
+            "Lisa kocht nicht."
+        ],
+        options: [
+            "Lisa kocht und die Küche ist warm.",
+            "Lisa kocht nicht und die Küche ist nicht warm.",
+            "Lisa kocht und es duftet.",
+            "Lisa kocht nicht und es duftet."
+        ],
+        correct: 1,
+        explanation: "Ofen nicht an → nicht warm (Kontraposition Bidirektional). Kocht nicht. Aus Satz 5: duftet → kocht. Kontraposition: nicht kocht → nicht duftet. Also nicht duftet. Satz 4: duftet ODER nicht kocht. Nicht kocht erfüllt. Zwingend: nicht kocht UND nicht warm."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Der Hund bellt oder die Katze miaut.",
+            "Wenn der Hund bellt, dann ist jemand an der Tür.",
+            "Jemand ist genau dann an der Tür, wenn es klingelt.",
+            "Es klingelt nicht.",
+            "Wenn die Katze miaut, dann ist sie hungrig.",
+            "Die Katze ist hungrig oder der Hund bellt nicht."
+        ],
+        options: [
+            "Der Hund bellt und jemand ist an der Tür.",
+            "Der Hund bellt nicht und die Katze miaut.",
+            "Der Hund bellt nicht und die Katze ist hungrig.",
+            "Der Hund bellt und es klingelt."
+        ],
+        correct: 2,
+        explanation: "Nicht klingelt → niemand an Tür (Kontraposition Bidirektional). Niemand an Tür → Hund nicht bellt (Kontraposition). Inklusives ODER: Hund ODER Katze. Da nicht Hund, muss Katze miauen. Katze miaut → hungrig. Also: nicht Hund bellt UND Katze hungrig."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn Tom lernt, dann besteht er die Prüfung oder er hat Glück.",
+            "Tom hat genau dann Glück, wenn er ein Kleeblatt findet.",
+            "Tom hat kein Kleeblatt gefunden.",
+            "Tom besteht die Prüfung oder er lernt nicht.",
+            "Wenn Tom besteht, dann hat er gelernt.",
+            "Tom lernt nicht."
+        ],
+        options: [
+            "Tom lernt und besteht die Prüfung.",
+            "Tom lernt nicht und besteht nicht.",
+            "Tom lernt und hat Glück.",
+            "Tom lernt nicht und hat Glück."
+        ],
+        correct: 1,
+        explanation: "Kein Kleeblatt → kein Glück (Kontraposition Bidirektional). Lernt nicht. Aus Satz 5: besteht → gelernt. Kontraposition: nicht gelernt → nicht besteht. Also nicht besteht. Satz 4: besteht ODER nicht lernt. Nicht lernt erfüllt. Zwingend: nicht lernt UND nicht besteht."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn die Heizung an ist, dann ist es warm oder die Fenster sind geschlossen.",
+            "Die Fenster sind genau dann geschlossen, wenn es windig ist.",
+            "Es ist nicht windig.",
+            "Es ist warm oder die Heizung ist aus.",
+            "Wenn es warm ist, dann ist die Heizung an.",
+            "Die Heizung ist an."
+        ],
+        options: [
+            "Die Heizung ist an und die Fenster sind geschlossen.",
+            "Die Heizung ist an und die Fenster sind nicht geschlossen.",
+            "Die Heizung ist aus und die Fenster sind geschlossen.",
+            "Die Heizung ist aus und die Fenster sind nicht geschlossen."
+        ],
+        correct: 1,
+        explanation: "Nicht windig → Fenster nicht geschlossen (Kontraposition Bidirektional). Heizung an → (warm ODER Fenster geschlossen). Fenster nicht geschlossen, also muss warm gelten. Warm → Heizung an (Satz 5). Konsistent. Also: Heizung an UND Fenster nicht geschlossen."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Das Telefon klingelt oder jemand schreibt eine Nachricht.",
+            "Wenn das Telefon klingelt, dann ist jemand am Apparat.",
+            "Jemand ist genau dann am Apparat, wenn die Leitung besetzt ist.",
+            "Die Leitung ist nicht besetzt.",
+            "Wenn jemand schreibt, dann ist die Leitung frei.",
+            "Die Leitung ist frei oder das Telefon klingelt nicht."
+        ],
+        options: [
+            "Das Telefon klingelt und jemand ist am Apparat.",
+            "Das Telefon klingelt nicht und jemand schreibt.",
+            "Das Telefon klingelt nicht und niemand schreibt.",
+            "Das Telefon klingelt und die Leitung ist besetzt."
+        ],
+        correct: 1,
+        explanation: "Nicht besetzt → niemand am Apparat (Kontraposition Bidirektional). Niemand am Apparat → Telefon nicht klingelt (Kontraposition). Inklusives ODER: Telefon ODER schreibt. Da nicht Telefon, muss schreiben gelten. Schreibt → Leitung frei. Satz 6: frei ODER nicht klingelt. Nicht klingelt erfüllt. Also: nicht klingelt UND schreibt."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Kühlschrank voll ist, dann ist der Einkauf erledigt oder es wurde geliefert.",
+            "Der Einkauf ist genau dann erledigt, wenn jemand im Supermarkt war.",
+            "Niemand war im Supermarkt.",
+            "Es wurde geliefert oder der Kühlschrank ist leer.",
+            "Wenn geliefert wurde, dann ist der Kühlschrank voll.",
+            "Der Kühlschrank ist voll."
+        ],
+        options: [
+            "Der Kühlschrank ist voll und der Einkauf ist erledigt.",
+            "Der Kühlschrank ist voll und es wurde geliefert.",
+            "Der Kühlschrank ist leer und der Einkauf ist nicht erledigt.",
+            "Der Kühlschrank ist leer und es wurde nicht geliefert."
+        ],
+        correct: 1,
+        explanation: "Niemand im Supermarkt → Einkauf nicht erledigt (Kontraposition Bidirektional). Kühlschrank voll → (Einkauf erledigt ODER geliefert). Nicht erledigt, also muss geliefert gelten. Geliefert → voll (Satz 5). Voll ist wahr, konsistent. Also: voll UND geliefert."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn die Blumen blühen, dann ist es Frühling oder die Erde ist gedüngt.",
+            "Es ist genau dann Frühling, wenn die Vögel singen.",
+            "Die Vögel singen nicht.",
+            "Die Erde ist gedüngt oder die Blumen blühen nicht.",
+            "Wenn die Erde gedüngt ist, dann blühen die Blumen.",
+            "Die Blumen blühen."
+        ],
+        options: [
+            "Die Blumen blühen und es ist Frühling.",
+            "Die Blumen blühen und die Erde ist gedüngt.",
+            "Die Blumen blühen nicht und es ist nicht Frühling.",
+            "Die Blumen blühen nicht und die Erde ist nicht gedüngt."
+        ],
+        correct: 1,
+        explanation: "Vögel nicht singen → nicht Frühling (Kontraposition Bidirektional). Blühen → (Frühling ODER gedüngt). Nicht Frühling, also muss gedüngt gelten. Gedüngt → blühen (Satz 5). Blühen ist wahr, konsistent. Also: blühen UND gedüngt."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn das Radio an ist, dann ist Musik zu hören oder es ist laut.",
+            "Musik ist genau dann zu hören, wenn der Sender eingestellt ist.",
+            "Der Sender ist nicht eingestellt.",
+            "Es ist laut oder das Radio ist aus.",
+            "Wenn es laut ist, dann ist das Radio an.",
+            "Das Radio ist an."
+        ],
+        options: [
+            "Das Radio ist an und Musik ist zu hören.",
+            "Das Radio ist an und es ist laut.",
+            "Das Radio ist aus und der Sender ist nicht eingestellt.",
+            "Das Radio ist aus und es ist nicht laut."
+        ],
+        correct: 1,
+        explanation: "Sender nicht eingestellt → keine Musik (Kontraposition Bidirektional). Radio an → (Musik ODER laut). Keine Musik, also muss laut gelten. Laut → Radio an (Satz 5). Radio an ist wahr, konsistent. Also: Radio an UND laut."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Laden offen ist, dann kann man einkaufen oder es wird aufgeräumt.",
+            "Man kann genau dann einkaufen, wenn die Kasse funktioniert.",
+            "Die Kasse funktioniert nicht.",
+            "Es wird aufgeräumt oder der Laden ist geschlossen.",
+            "Wenn aufgeräumt wird, dann ist der Laden offen.",
+            "Der Laden ist offen."
+        ],
+        options: [
+            "Der Laden ist offen und man kann einkaufen.",
+            "Der Laden ist offen und es wird aufgeräumt.",
+            "Der Laden ist geschlossen und die Kasse funktioniert.",
+            "Der Laden ist geschlossen und es wird nicht aufgeräumt."
+        ],
+        correct: 1,
+        explanation: "Kasse nicht funktioniert → nicht einkaufen (Kontraposition Bidirektional). Laden offen → (einkaufen ODER aufräumen). Nicht einkaufen, also muss aufgeräumt werden. Aufräumen → offen (Satz 5). Offen ist wahr, konsistent. Also: offen UND aufräumen."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn die Pflanze gegossen wird, dann wächst sie oder sie blüht.",
+            "Die Pflanze blüht genau dann, wenn sie genug Licht hat.",
+            "Sie hat nicht genug Licht.",
+            "Die Pflanze wächst oder sie wird nicht gegossen.",
+            "Wenn die Pflanze wächst, dann wird sie gegossen.",
+            "Die Pflanze wird gegossen."
+        ],
+        options: [
+            "Die Pflanze wird gegossen und sie blüht.",
+            "Die Pflanze wird gegossen und sie wächst.",
+            "Die Pflanze wird nicht gegossen und sie blüht nicht.",
+            "Die Pflanze wird nicht gegossen und sie wächst nicht."
+        ],
+        correct: 1,
+        explanation: "Nicht genug Licht → nicht blüht (Kontraposition Bidirektional). Gegossen → (wächst ODER blüht). Nicht blüht, also muss wachsen. Wächst → gegossen (Satz 5). Gegossen ist wahr, konsistent. Also: gegossen UND wächst."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Das Konzert findet statt oder die Tickets werden zurückerstattet.",
+            "Wenn das Konzert stattfindet, dann ist die Bühne aufgebaut.",
+            "Die Bühne ist genau dann aufgebaut, wenn das Personal da ist.",
+            "Das Personal ist nicht da.",
+            "Wenn die Tickets zurückerstattet werden, dann findet das Konzert nicht statt.",
+            "Die Tickets werden zurückerstattet."
+        ],
+        options: [
+            "Das Konzert findet statt und die Bühne ist aufgebaut.",
+            "Das Konzert findet nicht statt und die Tickets werden zurückerstattet.",
+            "Das Konzert findet statt und die Tickets werden nicht zurückerstattet.",
+            "Das Konzert findet nicht statt und die Bühne ist aufgebaut."
+        ],
+        correct: 1,
+        explanation: "Personal nicht da → nicht aufgebaut (Kontraposition Bidirektional). Nicht aufgebaut → Konzert nicht stattfindet (Kontraposition). Tickets zurückerstattet → Konzert nicht stattfindet (Satz 5). Konsistent. Also: nicht stattfindet UND Tickets zurückerstattet."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Wecker klingelt, dann ist es Morgen oder jemand hat ihn gestellt.",
+            "Es ist genau dann Morgen, wenn die Sonne aufgeht.",
+            "Die Sonne ist aufgegangen.",
+            "Jemand hat den Wecker gestellt oder er klingelt nicht.",
+            "Wenn jemand den Wecker gestellt hat, dann klingelt er.",
+            "Der Wecker klingelt."
+        ],
+        options: [
+            "Der Wecker klingelt und es ist Morgen.",
+            "Der Wecker klingelt und jemand hat ihn gestellt.",
+            "Der Wecker klingelt nicht und es ist Morgen.",
+            "Der Wecker klingelt nicht und niemand hat ihn gestellt."
+        ],
+        correct: 0,
+        explanation: "Sonne aufgegangen → Morgen (Bidirektional). Wecker klingelt → (Morgen ODER gestellt). Morgen erfüllt. Inklusives ODER in Satz 4: gestellt ODER nicht klingelt. Klingelt erfüllt. Zwingend: klingelt UND Morgen."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Bus fährt, dann ist die Straße frei oder die Fahrgäste warten.",
+            "Die Straße ist genau dann frei, wenn kein Stau ist.",
+            "Es ist Stau.",
+            "Die Fahrgäste warten oder der Bus fährt nicht.",
+            "Wenn die Fahrgäste warten, dann ist der Bus pünktlich.",
+            "Der Bus ist pünktlich."
+        ],
+        options: [
+            "Der Bus fährt und die Straße ist frei.",
+            "Der Bus fährt nicht und die Fahrgäste warten.",
+            "Der Bus fährt und die Fahrgäste warten.",
+            "Der Bus fährt nicht und die Straße ist frei."
+        ],
+        correct: 1,
+        explanation: "Stau → nicht frei (Kontraposition Bidirektional). Nicht frei → Bus nicht fährt (Kontraposition). Inklusives ODER: Bus ODER Fahrgäste warten. Bus nicht fährt, also müssen Fahrgäste warten. Warten → pünktlich (Satz 5). Pünktlich ist wahr, konsistent. Also: nicht fährt UND warten."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn es schneit, dann ist es kalt oder die Straße ist weiß.",
+            "Es ist genau dann kalt, wenn die Temperatur unter Null ist.",
+            "Die Temperatur ist unter Null.",
+            "Die Straße ist weiß oder es schneit nicht.",
+            "Wenn die Straße weiß ist, dann ist es kalt.",
+            "Es schneit."
+        ],
+        options: [
+            "Es schneit und die Straße ist weiß.",
+            "Es schneit und es ist kalt.",
+            "Es schneit nicht und die Straße ist weiß.",
+            "Es schneit nicht und es ist kalt."
+        ],
+        correct: 1,
+        explanation: "Unter Null → kalt (Bidirektional). Schneit → (kalt ODER weiß). Kalt erfüllt. Inklusives ODER in Satz 4: weiß ODER nicht schneit. Schneit erfüllt. Zwingend: schneit UND kalt."
+    },
+    {
+        difficulty: "hard", difficultyLabel: "Schwer (6 Sätze)",
+        statements: [
+            "Wenn der Arzt da ist, dann kann man behandelt werden oder es ist Sprechstunde.",
+            "Man kann genau dann behandelt werden, wenn man einen Termin hat.",
+            "Man hat einen Termin.",
+            "Es ist Sprechstunde oder der Arzt ist nicht da.",
+            "Wenn es Sprechstunde ist, dann ist der Arzt da.",
+            "Der Arzt ist da."
+        ],
+        options: [
+            "Der Arzt ist da und man kann behandelt werden.",
+            "Der Arzt ist da und es ist Sprechstunde.",
+            "Der Arzt ist nicht da und man hat einen Termin.",
+            "Der Arzt ist nicht da und es ist Sprechstunde."
+        ],
+        correct: 0,
+        explanation: "Termin → behandeln (Bidirektional). Arzt da → (behandeln ODER Sprechstunde). Behandeln erfüllt. Inklusives ODER in Satz 4: Sprechstunde ODER nicht da. Da da, muss Sprechstunde sein? Nein, inklusives ODER ist erfüllt wenn da. Aber: Sprechstunde → Arzt da (Satz 5). Da ist wahr. Aber wir wissen nicht, ob Sprechstunde. Zwingend: Arzt da UND behandeln."
+    }
+];
+
+// Variablen für das aktive Quiz
+let quizData = [];
+let currentQuestionIndex = 0;
+let score = 0;
+let correctAnswers = 0;
+let timeBonus = 0;
+let timerInterval;
+let timeLeft;
+const TIME_PER_QUESTION = 54;
+let answered = false;
+
+const startScreen = document.getElementById('startScreen');
+const quizScreen = document.getElementById('quizScreen');
+const resultScreen = document.getElementById('resultScreen');
+const statementsContainer = document.getElementById('statementsContainer');
+const optionsContainer = document.getElementById('optionsContainer');
+const timerBar = document.getElementById('timerBar');
+const timerText = document.getElementById('timerText');
+const currentQuestionSpan = document.getElementById('currentQuestion');
+const totalQuestionsSpan = document.getElementById('totalQuestions');
+const difficultyBadge = document.getElementById('difficultyBadge');
+const feedback = document.getElementById('feedback');
+const nextBtn = document.getElementById('nextBtn');
+
+// Fisher-Yates Shuffle
+function shuffleArray(array) {
+    const shuffled = array.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = temp;
+    }
+    return shuffled;
+}
+
+function startQuiz() {
+    quizData = shuffleArray(allQuizData);
+    
+    startScreen.classList.add('hidden');
+    quizScreen.classList.remove('hidden');
+    totalQuestionsSpan.textContent = quizData.length;
+    currentQuestionIndex = 0;
+    score = 0;
+    correctAnswers = 0;
+    timeBonus = 0;
+    loadQuestion();
+}
+
+function loadQuestion() {
+    answered = false;
+    const question = quizData[currentQuestionIndex];
+    
+    currentQuestionSpan.textContent = currentQuestionIndex + 1;
+    difficultyBadge.textContent = question.difficultyLabel;
+    difficultyBadge.className = 'difficulty-badge difficulty-' + question.difficulty;
+    
+    statementsContainer.innerHTML = '';
+    question.statements.forEach(function(stmt) {
+        const div = document.createElement('div');
+        div.className = 'statement';
+        div.textContent = stmt;
+        statementsContainer.appendChild(div);
+    });
+
+    optionsContainer.innerHTML = '';
+    const labels = ['a', 'b', 'c', 'd'];
+    question.options.forEach(function(option, index) {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.innerHTML = '<strong>' + labels[index] + ')</strong> ' + option;
+        btn.onclick = function() { selectOption(index); };
+        optionsContainer.appendChild(btn);
+    });
+
+    feedback.className = 'feedback';
+    nextBtn.classList.add('hidden');
+
+    startTimer();
+}
+
+function startTimer() {
+    timeLeft = TIME_PER_QUESTION;
+    updateTimerDisplay();
+    
+    clearInterval(timerInterval);
+    timerInterval = setInterval(function() {
+        timeLeft--;
+        updateTimerDisplay();
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timeUp();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const percentage = (timeLeft / TIME_PER_QUESTION) * 100;
+    timerBar.style.width = percentage + '%';
+    timerText.textContent = timeLeft + ' Sekunden';
+    
+    timerBar.className = 'timer-bar';
+    if (timeLeft <= 10) {
+        timerBar.classList.add('danger');
+    } else if (timeLeft <= 27) {
+        timerBar.classList.add('warning');
+    }
+}
+
+function timeUp() {
+    if (answered) return;
+    answered = true;
+    
+    const question = quizData[currentQuestionIndex];
+    const options = optionsContainer.children;
+    options[question.correct].classList.add('correct');
+    
+    Array.from(options).forEach(function(opt) { opt.classList.add('disabled'); });
+    
+    showFeedback('timeout', 'Zeit abgelaufen! ' + question.explanation);
+    
+    nextBtn.classList.remove('hidden');
+}
+
+function selectOption(index) {
+    if (answered) return;
+    answered = true;
+    clearInterval(timerInterval);
+    
+    const question = quizData[currentQuestionIndex];
+    const options = optionsContainer.children;
+    const selectedBtn = options[index];
+    
+    Array.from(options).forEach(function(opt) { opt.classList.add('disabled'); });
+    
+    if (index === question.correct) {
+        selectedBtn.classList.add('correct');
+        selectedBtn.innerHTML += ' <span class="option-icon">✓</span>';
+        
+        correctAnswers++;
+        const points = 10;
+        const bonus = Math.floor(timeLeft * 0.185);
+        score += points + bonus;
+        timeBonus += bonus;
+        
+        showFeedback('correct', 'Richtig! +' + points + ' Punkte +' + bonus + ' Zeitbonus. ' + question.explanation);
+    } else {
+        selectedBtn.classList.add('wrong');
+        selectedBtn.innerHTML += ' <span class="option-icon">✗</span>';
+        
+        options[question.correct].classList.add('correct');
+        
+        showFeedback('wrong', 'Falsch! ' + question.explanation);
+    }
+    
+    nextBtn.classList.remove('hidden');
+}
+
+function showFeedback(type, message) {
+    feedback.className = 'feedback ' + type + ' show';
+    feedback.textContent = message;
+}
+
+function nextQuestion() {
+    currentQuestionIndex++;
+    
+    if (currentQuestionIndex < quizData.length) {
+        loadQuestion();
+    } else {
+        showResults();
+    }
+}
+
+function showResults() {
+    quizScreen.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
+    
+    const percentage = Math.round((correctAnswers / quizData.length) * 100);
+    
+    document.getElementById('scoreValue').textContent = score;
+    document.getElementById('correctValue').textContent = correctAnswers + '/' + quizData.length;
+    document.getElementById('timeBonus').textContent = timeBonus;
+    
+    let message = '';
+    if (percentage >= 90) {
+        message = '🌟 Hervorragend! Du bist ein Logik-Meister!';
+    } else if (percentage >= 75) {
+        message = '👏 Sehr gut! Exzellentes logisches Denken!';
+    } else if (percentage >= 60) {
+        message = '👍 Gut gemacht! Solides Verständnis!';
+    } else if (percentage >= 40) {
+        message = '📚 Nicht schlecht! Noch etwas Übung nötig.';
+    } else {
+        message = '💪 Übung macht den Meister! Versuch es noch einmal.';
+    }
+    
+    document.getElementById('resultMessage').innerHTML = '<h2>' + message + '</h2>';
+    document.getElementById('resultDetails').textContent = 
+        'Du hast ' + correctAnswers + ' von ' + quizData.length + ' Aufgaben richtig beantwortet (' + percentage + '%). ' +
+        'Insgesamt ' + score + ' Punkte (inkl. ' + timeBonus + ' Zeitbonus-Punkte).';
+}
+
+function restartQuiz() {
+    resultScreen.classList.add('hidden');
+    startQuiz();
+}
+</script>
+
+</body>
+</html>
